@@ -2,159 +2,104 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>The Green Row</title>
   <style>
-    body { font-family: sans-serif; background: #222; color: #eee; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-    .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
-    button, input[type=range] { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-    label { font-size: 16px; }
-    .row-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; }
-    .row { display: flex; gap: 5px; margin-bottom: 5px; }
-    .pad { width: 30px; height: 30px; background: #444; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
-    .pad.active { background: #0f0; }
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: white;
+      text-align: center;
+    }
+    .pad-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin: 20px auto;
+    }
+    .row {
+      display: flex;
+      gap: 2px;
+      overflow-x: auto;
+    }
+    .pad {
+      width: 20px;
+      height: 20px;
+      background: #333;
+      border: 1px solid #555;
+      cursor: pointer;
+    }
+    .pad.active {
+      background: #0f0;
+    }
+    button, input[type="range"] {
+      margin: 10px;
+      padding: 5px 10px;
+    }
   </style>
 </head>
 <body>
-
   <h1>The Green Row</h1>
-  <div class="controls">
-    <button id="playBtn">Play</button>
-    <button id="downloadBtn">Download</button>
-    <label for="tempoSlider">Tempo: <span id="tempoVal">120</span> BPM</label>
-    <input type="range" id="tempoSlider" min="20" max="300" value="120" />
-    <label for="widthSlider">Width: <span id="widthVal">16</span> Steps</label>
-    <input type="range" id="widthSlider" min="4" max="32" value="16" />
-  </div>
-
-  <div id="sequencer"></div>
+  <label for="widthSlider">Steps per Row:</label>
+  <input type="range" id="widthSlider" min="4" max="100" value="16" />
+  <br />
+  <button id="play">Play</button>
+  <button id="download">Download</button>
+  <div class="pad-grid" id="padGrid"></div>
 
   <script>
-    const numRows = 8;
     let bpm = 120;
-    let stepCount = 16;
-    let isPlaying = false;
-    let playCtx, scheduledNodes = [];
+    let steps = 16;
+    const rows = 8;
     const padGrid = [];
 
-    const sequencer = document.getElementById("sequencer");
-    const tempoSlider = document.getElementById("tempoSlider");
-    const tempoVal = document.getElementById("tempoVal");
-    const widthSlider = document.getElementById("widthSlider");
-    const widthVal = document.getElementById("widthVal");
+    const gridContainer = document.getElementById("padGrid");
 
-    function createSequencerGrid() {
-      sequencer.innerHTML = "";
+    function createGrid() {
+      gridContainer.innerHTML = "";
       padGrid.length = 0;
-
-      for (let row = 0; row < numRows; row++) {
-        const rowContainer = document.createElement("div");
-        rowContainer.className = "row-container";
-
-        const rowElem = document.createElement("div");
-        rowElem.className = "row";
-
-        const padRow = [];
-        for (let step = 0; step < stepCount; step++) {
-          const pad = createPad();
-          rowElem.appendChild(pad);
-          padRow.push(pad);
+      for (let row = 0; row < rows; row++) {
+        const rowEl = document.createElement("div");
+        rowEl.className = "row";
+        padGrid[row] = [];
+        for (let step = 0; step < steps; step++) {
+          const pad = document.createElement("div");
+          pad.className = "pad";
+          pad.addEventListener("click", () => {
+            pad.classList.toggle("active");
+          });
+          rowEl.appendChild(pad);
+          padGrid[row].push(pad);
         }
-
-        padGrid.push(padRow);
-        rowContainer.appendChild(rowElem);
-        sequencer.appendChild(rowContainer);
+        gridContainer.appendChild(rowEl);
       }
     }
 
-    function updateRowLengths(newLength) {
-      stepCount = newLength;
-      widthVal.textContent = newLength;
-      for (let row = 0; row < numRows; row++) {
-        const padRow = padGrid[row];
-        const rowElem = sequencer.children[row].querySelector(".row");
-
-        while (padRow.length > newLength) {
-          padRow.pop();
-          rowElem.removeChild(rowElem.lastChild);
-        }
-
-        while (padRow.length < newLength) {
-          const pad = createPad();
-          rowElem.appendChild(pad);
-          padRow.push(pad);
-        }
-      }
-    }
-
-    function createPad() {
-      const pad = document.createElement("div");
-      pad.className = "pad";
-      pad.addEventListener("click", () => pad.classList.toggle("active"));
-      return pad;
-    }
-
-    tempoSlider.addEventListener("input", () => {
-      bpm = +tempoSlider.value;
-      tempoVal.textContent = bpm;
+    document.getElementById("widthSlider").addEventListener("input", e => {
+      steps = parseInt(e.target.value);
+      createGrid();
     });
 
-    widthSlider.addEventListener("input", () => {
-      updateRowLengths(+widthSlider.value);
-    });
-
-    document.getElementById("playBtn").addEventListener("click", () => {
-      if (!isPlaying) {
-        isPlaying = true;
-        document.getElementById("playBtn").textContent = "Stop";
-        playTrack();
-      } else {
-        stopTrack();
-      }
-    });
-
-    function playTrack() {
-      playCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const masterGain = playCtx.createGain();
-      masterGain.gain.value = 0.8;
-      masterGain.connect(playCtx.destination);
-
-      const stepDuration = (60 / bpm) / 4;
-      const startTime = playCtx.currentTime;
-
-      for (let step = 0; step < stepCount; step++) {
-        const time = startTime + step * stepDuration;
-        for (let row = 0; row < numRows; row++) {
-          if (padGrid[row][step]?.classList.contains("active")) {
-            scheduledNodes.push(playOfflineSound(playCtx, row, time, masterGain, true));
+    document.getElementById("play").addEventListener("click", () => {
+      const ctx = new AudioContext();
+      const startTime = ctx.currentTime;
+      for (let step = 0; step < steps; step++) {
+        const time = startTime + step * (60 / bpm) / 4;
+        for (let row = 0; row < rows; row++) {
+          if (padGrid[row][step].classList.contains("active")) {
+            playSound(ctx, row, time);
           }
         }
       }
+    });
 
-      setTimeout(stopTrack, stepCount * stepDuration * 1000 + 100);
-    }
-
-    function stopTrack() {
-      if (!playCtx) return;
-      scheduledNodes.forEach(n => { try { n.stop(); } catch {} });
-      scheduledNodes = [];
-      playCtx.close();
-      playCtx = null;
-      isPlaying = false;
-      document.getElementById("playBtn").textContent = "Play";
-    }
-
-    document.getElementById("downloadBtn").addEventListener("click", downloadTrack);
-
-    function downloadTrack() {
-      const duration = (60 / bpm) * (stepCount / 4);
+    document.getElementById("download").addEventListener("click", () => {
+      const duration = (60 / bpm) * 4;
       const sampleRate = 44100;
       const offlineCtx = new OfflineAudioContext(1, sampleRate * duration, sampleRate);
-
-      for (let step = 0; step < stepCount; step++) {
+      for (let step = 0; step < steps; step++) {
         const time = step * (60 / bpm) / 4;
-        for (let row = 0; row < numRows; row++) {
-          if (padGrid[row][step]?.classList.contains("active")) {
+        for (let row = 0; row < rows; row++) {
+          if (padGrid[row][step].classList.contains("active")) {
             playOfflineSound(offlineCtx, row, time);
           }
         }
@@ -169,19 +114,106 @@
         a.click();
         URL.revokeObjectURL(url);
       });
+    });
+
+    function playSound(ctx, index, when) {
+      playOfflineSound(ctx, index, when);
     }
 
-    function playOfflineSound(ctx, index, when, destination, live = false) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.4, when);
-      gain.gain.exponentialRampToValueAtTime(0.001, when + 0.3);
-      osc.type = ["sine", "square", "sawtooth", "triangle"][index % 4];
-      osc.frequency.setValueAtTime(200 + index * 50, when);
-      osc.connect(gain).connect(destination || ctx.destination);
-      osc.start(when);
-      osc.stop(when + 0.3);
-      if (live) return osc;
+    function playOfflineSound(ctx, index, when) {
+      switch (index) {
+        case 0:
+          let kick = ctx.createOscillator();
+          let kickGain = ctx.createGain();
+          kick.type = "sine";
+          kick.frequency.setValueAtTime(150, when);
+          kick.frequency.exponentialRampToValueAtTime(0.001, when + 0.5);
+          kickGain.gain.setValueAtTime(1, when);
+          kickGain.gain.exponentialRampToValueAtTime(0.001, when + 0.5);
+          kick.connect(kickGain).connect(ctx.destination);
+          kick.start(when);
+          kick.stop(when + 0.5);
+          break;
+        case 1:
+          const snareBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate);
+          const snareData = snareBuffer.getChannelData(0);
+          for (let i = 0; i < snareData.length; i++) snareData[i] = Math.random() * 2 - 1;
+          const snare = ctx.createBufferSource();
+          snare.buffer = snareBuffer;
+          const snareGain = ctx.createGain();
+          snareGain.gain.setValueAtTime(1, when);
+          snareGain.gain.exponentialRampToValueAtTime(0.01, when + 0.2);
+          snare.connect(snareGain).connect(ctx.destination);
+          snare.start(when);
+          break;
+        case 2:
+          const hat = ctx.createOscillator();
+          const hatGain = ctx.createGain();
+          hat.type = 'square';
+          hat.frequency.setValueAtTime(8000, when);
+          hatGain.gain.setValueAtTime(0.2, when);
+          hatGain.gain.exponentialRampToValueAtTime(0.001, when + 0.05);
+          hat.connect(hatGain).connect(ctx.destination);
+          hat.start(when);
+          hat.stop(when + 0.05);
+          break;
+        case 3:
+          const beep = ctx.createOscillator();
+          const beepGain = ctx.createGain();
+          beep.type = 'square';
+          beep.frequency.setValueAtTime(600, when);
+          beepGain.gain.setValueAtTime(0.3, when);
+          beepGain.gain.exponentialRampToValueAtTime(0.001, when + 0.2);
+          beep.connect(beepGain).connect(ctx.destination);
+          beep.start(when);
+          beep.stop(when + 0.2);
+          break;
+        case 4:
+          const sub = ctx.createOscillator();
+          const subGain = ctx.createGain();
+          sub.type = "sine";
+          sub.frequency.setValueAtTime(90, when);
+          subGain.gain.setValueAtTime(0.4, when);
+          subGain.gain.exponentialRampToValueAtTime(0.001, when + 0.6);
+          sub.connect(subGain).connect(ctx.destination);
+          sub.start(when);
+          sub.stop(when + 0.6);
+          break;
+        case 5:
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(400 + Math.random() * 200, when);
+          gain.gain.setValueAtTime(0.2, when);
+          gain.gain.exponentialRampToValueAtTime(0.001, when + 0.1);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(when);
+          osc.stop(when + 0.1);
+          break;
+        case 6:
+          const clapBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+          const clapData = clapBuffer.getChannelData(0);
+          for (let i = 0; i < clapData.length; i++) clapData[i] = Math.random() * 2 - 1;
+          const clap = ctx.createBufferSource();
+          clap.buffer = clapBuffer;
+          const clapGain = ctx.createGain();
+          clapGain.gain.setValueAtTime(1, when);
+          clapGain.gain.exponentialRampToValueAtTime(0.01, when + 0.1);
+          clap.connect(clapGain).connect(ctx.destination);
+          clap.start(when);
+          break;
+        case 7:
+          const ping = ctx.createOscillator();
+          const pingGain = ctx.createGain();
+          ping.type = "triangle";
+          ping.frequency.setValueAtTime(880, when);
+          pingGain.gain.setValueAtTime(0.4, when);
+          pingGain.gain.exponentialRampToValueAtTime(0.001, when + 0.6);
+          ping.connect(pingGain).connect(ctx.destination);
+          ping.start(when);
+          ping.stop(when + 0.6);
+          break;
+      }
     }
 
     function bufferToWave(buffer, length) {
@@ -189,14 +221,11 @@
       const lengthInSamples = length * numOfChan * 2;
       const bufferArray = new ArrayBuffer(44 + lengthInSamples);
       const view = new DataView(bufferArray);
-
       function writeString(view, offset, string) {
         for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
       }
-
       const channels = [];
       for (let i = 0; i < numOfChan; i++) channels.push(buffer.getChannelData(i));
-
       let offset = 0;
       writeString(view, offset, 'RIFF'); offset += 4;
       view.setUint32(offset, 36 + lengthInSamples, true); offset += 4;
@@ -211,7 +240,6 @@
       view.setUint16(offset, 16, true); offset += 2;
       writeString(view, offset, 'data'); offset += 4;
       view.setUint32(offset, lengthInSamples, true); offset += 4;
-
       for (let i = 0; i < length; i++) {
         for (let channel = 0; channel < numOfChan; channel++) {
           let sample = Math.max(-1, Math.min(1, channels[channel][i]));
@@ -220,11 +248,11 @@
           offset += 2;
         }
       }
-
       return new Blob([view], { type: 'audio/wav' });
     }
 
-    createSequencerGrid(); // Initial load
+    // Initialize grid
+    createGrid();
   </script>
 </body>
 </html>
