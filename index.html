@@ -8,70 +8,125 @@
       font-family: sans-serif;
       background: #111;
       color: white;
-      text-align: center;
-    }
-    .pad-grid {
       display: flex;
       flex-direction: column;
-      gap: 5px;
-      margin: 20px auto;
+      align-items: center;
+    }
+    .controls {
+      margin: 1rem;
+    }
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
     .row {
       display: flex;
       gap: 2px;
-      overflow-x: auto;
     }
-    .pad {
-      width: 20px;
-      height: 20px;
+    .cell {
+      width: 24px;
+      height: 24px;
       background: #333;
-      border: 1px solid #555;
-      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.15s;
     }
-    .pad.active {
-      background: #0f0;
+    .cell.active {
+      background: limegreen;
     }
-    button, input[type="range"] {
-      margin: 10px;
-      padding: 5px 10px;
+    label {
+      margin-right: 1rem;
     }
   </style>
 </head>
 <body>
   <h1>The Green Row</h1>
-  <label for="widthSlider">Steps per Row:</label>
-  <input type="range" id="widthSlider" min="4" max="100" value="16" />
-  <br />
-  <button id="play">Play</button>
-  <button id="download">Download</button>
-  <div class="pad-grid" id="padGrid"></div>
+  <div class="controls">
+    <label>Grid Width: <input id="widthSlider" type="range" min="1" max="100" value="16" /></label>
+    <label>Pitch: <input id="pitchSlider" type="range" min="100" max="1000" value="440" /></label>
+    <label>BPS: <input id="bpsSlider" type="range" min="1" max="60" value="8" /></label>
+    <button onclick="play()">Play</button>
+    <button onclick="stop()">Stop</button>
+    <button onclick="downloadTrack()">Download</button>
+  </div>
+  <div class="grid" id="grid"></div>
 
   <script>
-    let bpm = 120;
-    let steps = 16;
     const rows = 8;
-    const padGrid = [];
+    let steps = 16;
+    let pitch = 440;
+    let bps = 8;
+    let isPlaying = false;
+    let currentStep = 0;
+    let intervalId;
+    const waveforms = ["sine", "square", "triangle", "sawtooth"];
+    let gridData = [];
 
-    const gridContainer = document.getElementById("padGrid");
+    const gridEl = document.getElementById("grid");
 
     function createGrid() {
-      gridContainer.innerHTML = "";
-      padGrid.length = 0;
-      for (let row = 0; row < rows; row++) {
+      const oldData = gridData.map(row => row.slice());
+      gridEl.innerHTML = "";
+      gridData = [];
+      for (let r = 0; r < rows; r++) {
         const rowEl = document.createElement("div");
         rowEl.className = "row";
-        padGrid[row] = [];
-        for (let step = 0; step < steps; step++) {
-          const pad = document.createElement("div");
-          pad.className = "pad";
-          pad.addEventListener("click", () => {
-            pad.classList.toggle("active");
+        const rowData = [];
+        for (let s = 0; s < steps; s++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          if (oldData[r] && oldData[r][s]) {
+            cell.classList.add("active");
+          }
+          cell.addEventListener("click", () => {
+            cell.classList.toggle("active");
+            gridData[r][s] = cell.classList.contains("active");
           });
-          rowEl.appendChild(pad);
-          padGrid[row].push(pad);
+          rowEl.appendChild(cell);
+          rowData.push(oldData[r] && oldData[r][s] ? true : false);
         }
-        gridContainer.appendChild(rowEl);
+        gridData.push(rowData);
+        gridEl.appendChild(rowEl);
       }
+    }
+
+    function playSound(stepIndex, row) {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const waveform = waveforms[row % waveforms.length];
+
+      osc.type = waveform;
+      osc.frequency.setValueAtTime(pitch + row * 20, ctx.currentTime);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    }
+
+    function play() {
+      stop();
+      isPlaying = true;
+      currentStep = 0;
+      intervalId = setInterval(() => {
+        if (!isPlaying || currentStep >= steps) {
+          stop();
+          return;
+        }
+        for (let r = 0; r < rows; r++) {
+          if (gridData[r][currentStep]) {
+            playSound(currentStep, r);
+          }
+        }
+        currentStep++;
+      }, 1000 / bps);
+    }
+
+    function stop() {
+      isPlaying = false;
+      clearInterval(intervalId);
     }
 
     document.getElementById("widthSlider").addEventListener("input", e => {
@@ -79,179 +134,92 @@
       createGrid();
     });
 
-    document.getElementById("play").addEventListener("click", () => {
-      const ctx = new AudioContext();
-      const startTime = ctx.currentTime;
-      for (let step = 0; step < steps; step++) {
-        const time = startTime + step * (60 / bpm) / 4;
-        for (let row = 0; row < rows; row++) {
-          if (padGrid[row][step].classList.contains("active")) {
-            playSound(ctx, row, time);
-          }
-        }
-      }
+    document.getElementById("pitchSlider").addEventListener("input", e => {
+      pitch = parseInt(e.target.value);
     });
 
-    document.getElementById("download").addEventListener("click", () => {
-      const duration = (60 / bpm) * 4;
+    document.getElementById("bpsSlider").addEventListener("input", e => {
+      bps = parseInt(e.target.value);
+    });
+
+    function downloadTrack() {
+      const duration = steps / bps;
       const sampleRate = 44100;
       const offlineCtx = new OfflineAudioContext(1, sampleRate * duration, sampleRate);
-      for (let step = 0; step < steps; step++) {
-        const time = step * (60 / bpm) / 4;
-        for (let row = 0; row < rows; row++) {
-          if (padGrid[row][step].classList.contains("active")) {
-            playOfflineSound(offlineCtx, row, time);
+
+      for (let s = 0; s < steps; s++) {
+        const time = s / bps;
+        for (let r = 0; r < rows; r++) {
+          if (gridData[r][s]) {
+            const osc = offlineCtx.createOscillator();
+            const gain = offlineCtx.createGain();
+            osc.type = waveforms[r % waveforms.length];
+            osc.frequency.setValueAtTime(pitch + r * 20, time);
+            gain.gain.setValueAtTime(0.3, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+            osc.connect(gain).connect(offlineCtx.destination);
+            osc.start(time);
+            osc.stop(time + 0.3);
           }
         }
       }
 
-      offlineCtx.startRendering().then(renderedBuffer => {
-        const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
+      offlineCtx.startRendering().then(buffer => {
+        const wavBlob = bufferToWave(buffer, buffer.length);
         const url = URL.createObjectURL(wavBlob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "music.wav";
+        a.download = "track.wav";
         a.click();
         URL.revokeObjectURL(url);
       });
-    });
-
-    function playSound(ctx, index, when) {
-      playOfflineSound(ctx, index, when);
     }
 
-    function playOfflineSound(ctx, index, when) {
-      switch (index) {
-        case 0:
-          let kick = ctx.createOscillator();
-          let kickGain = ctx.createGain();
-          kick.type = "sine";
-          kick.frequency.setValueAtTime(150, when);
-          kick.frequency.exponentialRampToValueAtTime(0.001, when + 0.5);
-          kickGain.gain.setValueAtTime(1, when);
-          kickGain.gain.exponentialRampToValueAtTime(0.001, when + 0.5);
-          kick.connect(kickGain).connect(ctx.destination);
-          kick.start(when);
-          kick.stop(when + 0.5);
-          break;
-        case 1:
-          const snareBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate);
-          const snareData = snareBuffer.getChannelData(0);
-          for (let i = 0; i < snareData.length; i++) snareData[i] = Math.random() * 2 - 1;
-          const snare = ctx.createBufferSource();
-          snare.buffer = snareBuffer;
-          const snareGain = ctx.createGain();
-          snareGain.gain.setValueAtTime(1, when);
-          snareGain.gain.exponentialRampToValueAtTime(0.01, when + 0.2);
-          snare.connect(snareGain).connect(ctx.destination);
-          snare.start(when);
-          break;
-        case 2:
-          const hat = ctx.createOscillator();
-          const hatGain = ctx.createGain();
-          hat.type = 'square';
-          hat.frequency.setValueAtTime(8000, when);
-          hatGain.gain.setValueAtTime(0.2, when);
-          hatGain.gain.exponentialRampToValueAtTime(0.001, when + 0.05);
-          hat.connect(hatGain).connect(ctx.destination);
-          hat.start(when);
-          hat.stop(when + 0.05);
-          break;
-        case 3:
-          const beep = ctx.createOscillator();
-          const beepGain = ctx.createGain();
-          beep.type = 'square';
-          beep.frequency.setValueAtTime(600, when);
-          beepGain.gain.setValueAtTime(0.3, when);
-          beepGain.gain.exponentialRampToValueAtTime(0.001, when + 0.2);
-          beep.connect(beepGain).connect(ctx.destination);
-          beep.start(when);
-          beep.stop(when + 0.2);
-          break;
-        case 4:
-          const sub = ctx.createOscillator();
-          const subGain = ctx.createGain();
-          sub.type = "sine";
-          sub.frequency.setValueAtTime(90, when);
-          subGain.gain.setValueAtTime(0.4, when);
-          subGain.gain.exponentialRampToValueAtTime(0.001, when + 0.6);
-          sub.connect(subGain).connect(ctx.destination);
-          sub.start(when);
-          sub.stop(when + 0.6);
-          break;
-        case 5:
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = "sawtooth";
-          osc.frequency.setValueAtTime(400 + Math.random() * 200, when);
-          gain.gain.setValueAtTime(0.2, when);
-          gain.gain.exponentialRampToValueAtTime(0.001, when + 0.1);
-          osc.connect(gain).connect(ctx.destination);
-          osc.start(when);
-          osc.stop(when + 0.1);
-          break;
-        case 6:
-          const clapBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
-          const clapData = clapBuffer.getChannelData(0);
-          for (let i = 0; i < clapData.length; i++) clapData[i] = Math.random() * 2 - 1;
-          const clap = ctx.createBufferSource();
-          clap.buffer = clapBuffer;
-          const clapGain = ctx.createGain();
-          clapGain.gain.setValueAtTime(1, when);
-          clapGain.gain.exponentialRampToValueAtTime(0.01, when + 0.1);
-          clap.connect(clapGain).connect(ctx.destination);
-          clap.start(when);
-          break;
-        case 7:
-          const ping = ctx.createOscillator();
-          const pingGain = ctx.createGain();
-          ping.type = "triangle";
-          ping.frequency.setValueAtTime(880, when);
-          pingGain.gain.setValueAtTime(0.4, when);
-          pingGain.gain.exponentialRampToValueAtTime(0.001, when + 0.6);
-          ping.connect(pingGain).connect(ctx.destination);
-          ping.start(when);
-          ping.stop(when + 0.6);
-          break;
-      }
-    }
-
-    function bufferToWave(buffer, length) {
-      const numOfChan = buffer.numberOfChannels;
-      const lengthInSamples = length * numOfChan * 2;
-      const bufferArray = new ArrayBuffer(44 + lengthInSamples);
-      const view = new DataView(bufferArray);
-      function writeString(view, offset, string) {
-        for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
-      }
+    function bufferToWave(abuffer, len) {
+      const numOfChan = abuffer.numberOfChannels;
+      const length = len * numOfChan * 2 + 44;
+      const buffer = new ArrayBuffer(length);
+      const view = new DataView(buffer);
       const channels = [];
-      for (let i = 0; i < numOfChan; i++) channels.push(buffer.getChannelData(i));
       let offset = 0;
-      writeString(view, offset, 'RIFF'); offset += 4;
-      view.setUint32(offset, 36 + lengthInSamples, true); offset += 4;
-      writeString(view, offset, 'WAVE'); offset += 4;
-      writeString(view, offset, 'fmt '); offset += 4;
-      view.setUint32(offset, 16, true); offset += 4;
-      view.setUint16(offset, 1, true); offset += 2;
-      view.setUint16(offset, numOfChan, true); offset += 2;
-      view.setUint32(offset, buffer.sampleRate, true); offset += 4;
-      view.setUint32(offset, buffer.sampleRate * numOfChan * 2, true); offset += 4;
-      view.setUint16(offset, numOfChan * 2, true); offset += 2;
-      view.setUint16(offset, 16, true); offset += 2;
-      writeString(view, offset, 'data'); offset += 4;
-      view.setUint32(offset, lengthInSamples, true); offset += 4;
-      for (let i = 0; i < length; i++) {
-        for (let channel = 0; channel < numOfChan; channel++) {
-          let sample = Math.max(-1, Math.min(1, channels[channel][i]));
-          sample = (sample * 32767) | 0;
-          view.setInt16(offset, sample, true);
-          offset += 2;
+      let pos = 0;
+
+      function writeString(view, offset, str) {
+        for (let i = 0; i < str.length; i++) {
+          view.setUint8(offset + i, str.charCodeAt(i));
         }
       }
+
+      writeString(view, pos, 'RIFF'); pos += 4;
+      view.setUint32(pos, length - 8, true); pos += 4;
+      writeString(view, pos, 'WAVE'); pos += 4;
+      writeString(view, pos, 'fmt '); pos += 4;
+      view.setUint32(pos, 16, true); pos += 4;
+      view.setUint16(pos, 1, true); pos += 2;
+      view.setUint16(pos, numOfChan, true); pos += 2;
+      view.setUint32(pos, abuffer.sampleRate, true); pos += 4;
+      view.setUint32(pos, abuffer.sampleRate * 2 * numOfChan, true); pos += 4;
+      view.setUint16(pos, numOfChan * 2, true); pos += 2;
+      view.setUint16(pos, 16, true); pos += 2;
+      writeString(view, pos, 'data'); pos += 4;
+      view.setUint32(pos, length - pos - 4, true); pos += 4;
+
+      for (let i = 0; i < numOfChan; i++) {
+        channels.push(abuffer.getChannelData(i));
+      }
+
+      while (pos < length) {
+        for (let i = 0; i < numOfChan; i++) {
+          const sample = Math.max(-1, Math.min(1, channels[i][offset]));
+          view.setInt16(pos, sample * 32767, true);
+          pos += 2;
+        }
+        offset++;
+      }
+
       return new Blob([view], { type: 'audio/wav' });
     }
 
-    // Initialize grid
     createGrid();
   </script>
 </body>
