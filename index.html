@@ -5,174 +5,668 @@
   <title>The Green Row</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #111;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
       color: white;
       display: flex;
       flex-direction: column;
       align-items: center;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
     }
+
+    h1 {
+      margin: 0 0 30px 0;
+      font-size: 2.5em;
+      background: linear-gradient(45deg, #00ff88, #00ccff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+    }
+
     .controls {
-      margin: 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      width: 100%;
+      max-width: 1000px;
     }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.9em;
+      color: #ccc;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #333;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #00ff88, #00ccff);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+
+    select {
+      padding: 8px 12px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 20px;
+      background: linear-gradient(45deg, #00ff88, #00ccff);
+      color: black;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.stop {
+      background: linear-gradient(45deg, #ff4757, #ff6b7a);
+      box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+    }
+
+    button.stop:hover {
+      box-shadow: 0 6px 20px rgba(255, 71, 87, 0.4);
+    }
+
+    .sequencer-container {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 15px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
     .grid {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
+      margin-bottom: 20px;
     }
+
     .row {
       display: flex;
-      gap: 2px;
+      gap: 3px;
+      align-items: center;
     }
+
+    .row-label {
+      width: 80px;
+      font-size: 12px;
+      color: #aaa;
+      text-align: right;
+      margin-right: 10px;
+    }
+
     .cell {
-      width: 24px;
-      height: 24px;
-      background: #333;
-      border-radius: 4px;
-      transition: background 0.15s;
+      width: 28px;
+      height: 28px;
+      background: #2a2a2a;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 2px solid transparent;
+      position: relative;
     }
+
+    .cell:hover {
+      background: #3a3a3a;
+      transform: scale(1.1);
+    }
+
     .cell.active {
-      background: limegreen;
+      background: linear-gradient(45deg, #00ff88, #00ccff);
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+      border: 2px solid rgba(255, 255, 255, 0.3);
     }
-    label {
-      margin-right: 1rem;
+
+    .cell.current-step {
+      border: 2px solid #ffff00;
+      box-shadow: 0 0 10px rgba(255, 255, 0, 0.7);
+    }
+
+    .step-numbers {
+      display: flex;
+      gap: 3px;
+      margin-bottom: 10px;
+      padding-left: 90px;
+    }
+
+    .step-number {
+      width: 28px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #666;
+    }
+
+    .pattern-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    .preset-patterns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .preset-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .preset-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .swing-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .cell.playing {
+      animation: pulse 0.1s ease-in-out;
+    }
+
+    .value-display {
+      font-size: 12px;
+      color: #00ff88;
+      font-weight: bold;
+      min-width: 40px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <h1>The Green Row</h1>
+  
   <div class="controls">
-    <label>Grid Width: <input id="widthSlider" type="range" min="1" max="100" value="16" /></label>
-    <label>Pitch: <input id="pitchSlider" type="range" min="100" max="1000" value="440" /></label>
-    <label>BPS: <input id="bpsSlider" type="range" min="1" max="60" value="8" /></label>
-    <button onclick="play()">Play</button>
-    <button onclick="stop()">Stop</button>
-    <button onclick="downloadTrack()">Download</button>
+    <div class="control-group">
+      <label>Grid Width: <span class="value-display" id="widthValue">16</span></label>
+      <input id="widthSlider" type="range" min="4" max="32" value="16" />
+    </div>
+    
+    <div class="control-group">
+      <label>Base Pitch: <span class="value-display" id="pitchValue">440</span> Hz</label>
+      <input id="pitchSlider" type="range" min="100" max="1000" value="440" />
+    </div>
+    
+    <div class="control-group">
+      <label>BPM: <span class="value-display" id="bpmValue">120</span></label>
+      <input id="bpmSlider" type="range" min="60" max="200" value="120" />
+    </div>
+    
+    <div class="control-group">
+      <label>Master Volume: <span class="value-display" id="volumeValue">70</span>%</label>
+      <input id="volumeSlider" type="range" min="0" max="100" value="70" />
+    </div>
+    
+    <div class="control-group">
+      <label>Swing: <span class="value-display" id="swingValue">0</span>%</label>
+      <input id="swingSlider" type="range" min="0" max="50" value="0" />
+    </div>
+    
+    <div class="control-group">
+      <label>Scale:</label>
+      <select id="scaleSelect">
+        <option value="chromatic">Chromatic</option>
+        <option value="major">Major</option>
+        <option value="minor">Minor</option>
+        <option value="pentatonic">Pentatonic</option>
+        <option value="blues">Blues</option>
+      </select>
+    </div>
   </div>
-  <div class="grid" id="grid"></div>
+
+  <div class="buttons">
+    <button onclick="play()">▶ Play</button>
+    <button onclick="stop()" class="stop">⏹ Stop</button>
+    <button onclick="clearAll()">🗑 Clear All</button>
+    <button onclick="randomize()">🎲 Randomize</button>
+    <button onclick="downloadTrack()">💾 Download WAV</button>
+  </div>
+
+  <div class="preset-patterns">
+    <button class="preset-btn" onclick="loadPreset('kick')">Kick Pattern</button>
+    <button class="preset-btn" onclick="loadPreset('hihat')">Hi-Hat Pattern</button>
+    <button class="preset-btn" onclick="loadPreset('melody')">Melody Pattern</button>
+    <button class="preset-btn" onclick="loadPreset('bass')">Bass Pattern</button>
+  </div>
+
+  <div class="sequencer-container">
+    <div class="step-numbers" id="stepNumbers"></div>
+    <div class="grid" id="grid"></div>
+    
+    <div class="pattern-controls">
+      <button onclick="shiftLeft()">⬅ Shift Left</button>
+      <button onclick="shiftRight()">➡ Shift Right</button>
+      <button onclick="reversePattern()">🔄 Reverse</button>
+      <button onclick="doublePattern()">✖2 Double</button>
+    </div>
+  </div>
 
   <script>
     const rows = 8;
     let steps = 16;
     let pitch = 440;
-    let bps = 8;
+    let bpm = 120;
+    let volume = 0.7;
+    let swing = 0;
+    let scale = 'chromatic';
     let isPlaying = false;
     let currentStep = 0;
     let intervalId;
+    let audioContext;
+    let masterGain;
+    
     const waveforms = ["sine", "square", "triangle", "sawtooth"];
+    const rowNames = ["Kick", "Snare", "Hi-Hat", "Open Hat", "Crash", "Bass", "Lead", "Pad"];
     let gridData = [];
 
+    // Scale definitions
+    const scales = {
+      chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+      major: [0, 2, 4, 5, 7, 9, 11],
+      minor: [0, 2, 3, 5, 7, 8, 10],
+      pentatonic: [0, 2, 4, 7, 9],
+      blues: [0, 3, 5, 6, 7, 10]
+    };
+
     const gridEl = document.getElementById("grid");
+    const stepNumbersEl = document.getElementById("stepNumbers");
+
+    function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioContext.createGain();
+        masterGain.connect(audioContext.destination);
+      }
+    }
+
+    function createStepNumbers() {
+      stepNumbersEl.innerHTML = "";
+      for (let s = 0; s < steps; s++) {
+        const stepEl = document.createElement("div");
+        stepEl.className = "step-number";
+        stepEl.textContent = (s + 1).toString();
+        stepNumbersEl.appendChild(stepEl);
+      }
+    }
 
     function createGrid() {
       const oldData = gridData.map(row => row.slice());
       gridEl.innerHTML = "";
       gridData = [];
+      
       for (let r = 0; r < rows; r++) {
         const rowEl = document.createElement("div");
         rowEl.className = "row";
+        
+        const labelEl = document.createElement("div");
+        labelEl.className = "row-label";
+        labelEl.textContent = rowNames[r];
+        rowEl.appendChild(labelEl);
+        
         const rowData = [];
         for (let s = 0; s < steps; s++) {
           const cell = document.createElement("div");
           cell.className = "cell";
+          cell.dataset.row = r;
+          cell.dataset.step = s;
+          
           if (oldData[r] && oldData[r][s]) {
             cell.classList.add("active");
           }
+          
           cell.addEventListener("click", () => {
             cell.classList.toggle("active");
             gridData[r][s] = cell.classList.contains("active");
+            if (cell.classList.contains("active")) {
+              playSound(s, r, true); // Preview sound
+            }
           });
+          
           rowEl.appendChild(cell);
           rowData.push(oldData[r] && oldData[r][s] ? true : false);
         }
         gridData.push(rowData);
         gridEl.appendChild(rowEl);
       }
+      createStepNumbers();
     }
 
-    function playSound(stepIndex, row) {
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+    function getScaledFrequency(baseFreq, row) {
+      const scaleNotes = scales[scale];
+      const octave = Math.floor(row / scaleNotes.length);
+      const noteIndex = row % scaleNotes.length;
+      const semitones = scaleNotes[noteIndex] + (octave * 12);
+      return baseFreq * Math.pow(2, semitones / 12);
+    }
+
+    async function playSound(stepIndex, row, isPreview = false) {
+      initAudio();
+      
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const filter = audioContext.createBiquadFilter();
+      
       const waveform = waveforms[row % waveforms.length];
-
+      const frequency = getScaledFrequency(pitch, row);
+      
       osc.type = waveform;
-      osc.frequency.setValueAtTime(pitch + row * 20, ctx.currentTime);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-
-      osc.connect(gain).connect(ctx.destination);
+      osc.frequency.setValueAtTime(frequency, audioContext.currentTime);
+      
+      // Different envelope for different rows (drums vs melodic)
+      const isDrum = row < 5;
+      const attackTime = isDrum ? 0.001 : 0.01;
+      const decayTime = isDrum ? 0.1 : 0.3;
+      const sustainLevel = isDrum ? 0 : 0.3;
+      const releaseTime = isDrum ? 0.1 : 0.5;
+      
+      const startVolume = isPreview ? volume * 0.5 : volume;
+      
+      gain.gain.setValueAtTime(0, audioContext.currentTime);
+      gain.gain.linearRampToValueAtTime(startVolume, audioContext.currentTime + attackTime);
+      gain.gain.exponentialRampToValueAtTime(Math.max(sustainLevel, 0.001), audioContext.currentTime + attackTime + decayTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + attackTime + decayTime + releaseTime);
+      
+      // Filter setup
+      filter.type = isDrum ? 'lowpass' : 'bandpass';
+      filter.frequency.setValueAtTime(isDrum ? 2000 : frequency * 2, audioContext.currentTime);
+      filter.Q.setValueAtTime(isDrum ? 1 : 5, audioContext.currentTime);
+      
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+      
       osc.start();
-      osc.stop(ctx.currentTime + 0.3);
+      osc.stop(audioContext.currentTime + attackTime + decayTime + releaseTime);
+      
+      // Visual feedback
+      if (!isPreview) {
+        const cell = document.querySelector(`[data-row="${row}"][data-step="${stepIndex}"]`);
+        if (cell) {
+          cell.classList.add('playing');
+          setTimeout(() => cell.classList.remove('playing'), 100);
+        }
+      }
+    }
+
+    function updateCurrentStepVisual() {
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.classList.remove('current-step');
+      });
+      
+      if (isPlaying && currentStep < steps) {
+        document.querySelectorAll(`[data-step="${currentStep}"]`).forEach(cell => {
+          cell.classList.add('current-step');
+        });
+      }
     }
 
     function play() {
+      initAudio();
       stop();
       isPlaying = true;
       currentStep = 0;
-      intervalId = setInterval(() => {
+      
+      const stepDuration = (60 / bpm / 4) * 1000; // 16th notes
+      
+      function playStep() {
         if (!isPlaying || currentStep >= steps) {
           stop();
           return;
         }
+        
+        updateCurrentStepVisual();
+        
         for (let r = 0; r < rows; r++) {
           if (gridData[r][currentStep]) {
-            playSound(currentStep, r);
+            // Apply swing
+            const swingDelay = (currentStep % 2 === 1) ? (swing / 100) * (stepDuration / 4) : 0;
+            setTimeout(() => {
+              if (isPlaying) playSound(currentStep, r);
+            }, swingDelay);
           }
         }
+        
         currentStep++;
-      }, 1000 / bps);
+        if (currentStep >= steps) {
+          currentStep = 0; // Loop
+        }
+        
+        intervalId = setTimeout(playStep, stepDuration);
+      }
+      
+      playStep();
     }
 
     function stop() {
       isPlaying = false;
-      clearInterval(intervalId);
+      clearTimeout(intervalId);
+      updateCurrentStepVisual();
     }
 
-    document.getElementById("widthSlider").addEventListener("input", e => {
-      steps = parseInt(e.target.value);
+    function clearAll() {
+      gridData.forEach(row => row.fill(false));
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.classList.remove('active');
+      });
+    }
+
+    function randomize() {
+      for (let r = 0; r < rows; r++) {
+        for (let s = 0; s < steps; s++) {
+          const shouldActivate = Math.random() < (r < 5 ? 0.15 : 0.25); // Less density for drums
+          gridData[r][s] = shouldActivate;
+          const cell = document.querySelector(`[data-row="${r}"][data-step="${s}"]`);
+          if (cell) {
+            cell.classList.toggle('active', shouldActivate);
+          }
+        }
+      }
+    }
+
+    function shiftLeft() {
+      gridData.forEach(row => {
+        const first = row.shift();
+        row.push(first);
+      });
       createGrid();
-    });
+    }
 
-    document.getElementById("pitchSlider").addEventListener("input", e => {
-      pitch = parseInt(e.target.value);
-    });
+    function shiftRight() {
+      gridData.forEach(row => {
+        const last = row.pop();
+        row.unshift(last);
+      });
+      createGrid();
+    }
 
-    document.getElementById("bpsSlider").addEventListener("input", e => {
-      bps = parseInt(e.target.value);
-    });
+    function reversePattern() {
+      gridData.forEach(row => row.reverse());
+      createGrid();
+    }
 
-    function downloadTrack() {
-      const duration = steps / bps;
+    function doublePattern() {
+      if (steps >= 32) return;
+      steps = Math.min(32, steps * 2);
+      document.getElementById("widthSlider").value = steps;
+      document.getElementById("widthValue").textContent = steps;
+      gridData.forEach(row => {
+        const doubled = [...row, ...row];
+        row.length = 0;
+        row.push(...doubled);
+      });
+      createGrid();
+    }
+
+    function loadPreset(type) {
+      clearAll();
+      switch(type) {
+        case 'kick':
+          [0, 4, 8, 12].forEach(step => {
+            if (step < steps) gridData[0][step] = true;
+          });
+          break;
+        case 'hihat':
+          for (let i = 0; i < steps; i += 2) {
+            gridData[2][i] = true;
+          }
+          break;
+        case 'melody':
+          [0, 3, 7, 10, 14].forEach(step => {
+            if (step < steps) gridData[6][step] = true;
+          });
+          break;
+        case 'bass':
+          [0, 2, 8, 10].forEach(step => {
+            if (step < steps) gridData[5][step] = true;
+          });
+          break;
+      }
+      createGrid();
+    }
+
+    // Enhanced download function
+    async function downloadTrack() {
+      const duration = (steps / (bpm / 60 * 4)) * 2; // Two loops
       const sampleRate = 44100;
-      const offlineCtx = new OfflineAudioContext(1, sampleRate * duration, sampleRate);
+      const offlineCtx = new OfflineAudioContext(2, sampleRate * duration, sampleRate); // Stereo
+      const masterGainOffline = offlineCtx.createGain();
+      masterGainOffline.connect(offlineCtx.destination);
+      masterGainOffline.gain.setValueAtTime(volume, 0);
 
-      for (let s = 0; s < steps; s++) {
-        const time = s / bps;
-        for (let r = 0; r < rows; r++) {
-          if (gridData[r][s]) {
-            const osc = offlineCtx.createOscillator();
-            const gain = offlineCtx.createGain();
-            osc.type = waveforms[r % waveforms.length];
-            osc.frequency.setValueAtTime(pitch + r * 20, time);
-            gain.gain.setValueAtTime(0.3, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
-            osc.connect(gain).connect(offlineCtx.destination);
-            osc.start(time);
-            osc.stop(time + 0.3);
+      const stepDuration = 60 / bpm / 4;
+
+      for (let loop = 0; loop < 2; loop++) {
+        for (let s = 0; s < steps; s++) {
+          const time = (loop * steps + s) * stepDuration;
+          for (let r = 0; r < rows; r++) {
+            if (gridData[r][s]) {
+              const osc = offlineCtx.createOscillator();
+              const gain = offlineCtx.createGain();
+              const filter = offlineCtx.createBiquadFilter();
+              const panner = offlineCtx.createStereoPanner();
+              
+              const frequency = getScaledFrequency(pitch, r);
+              const isDrum = r < 5;
+              
+              osc.type = waveforms[r % waveforms.length];
+              osc.frequency.setValueAtTime(frequency, time);
+              
+              const attackTime = isDrum ? 0.001 : 0.01;
+              const decayTime = isDrum ? 0.1 : 0.3;
+              const sustainLevel = isDrum ? 0 : 0.3;
+              const releaseTime = isDrum ? 0.1 : 0.5;
+              
+              gain.gain.setValueAtTime(0, time);
+              gain.gain.linearRampToValueAtTime(volume * 0.8, time + attackTime);
+              gain.gain.exponentialRampToValueAtTime(Math.max(sustainLevel, 0.001), time + attackTime + decayTime);
+              gain.gain.exponentialRampToValueAtTime(0.001, time + attackTime + decayTime + releaseTime);
+              
+              filter.type = isDrum ? 'lowpass' : 'bandpass';
+              filter.frequency.setValueAtTime(isDrum ? 2000 : frequency * 2, time);
+              filter.Q.setValueAtTime(isDrum ? 1 : 5, time);
+              
+              panner.pan.setValueAtTime((r - 4) * 0.2, time); // Stereo spread
+              
+              osc.connect(filter);
+              filter.connect(gain);
+              gain.connect(panner);
+              panner.connect(masterGainOffline);
+              
+              osc.start(time);
+              osc.stop(time + attackTime + decayTime + releaseTime);
+            }
           }
         }
       }
 
-      offlineCtx.startRendering().then(buffer => {
-        const wavBlob = bufferToWave(buffer, buffer.length);
-        const url = URL.createObjectURL(wavBlob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "track.wav";
-        a.click();
-        URL.revokeObjectURL(url);
-      });
+      const buffer = await offlineCtx.startRendering();
+      const wavBlob = bufferToWave(buffer, buffer.length);
+      const url = URL.createObjectURL(wavBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "sequencer_track.wav";
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     function bufferToWave(abuffer, len) {
@@ -220,7 +714,52 @@
       return new Blob([view], { type: 'audio/wav' });
     }
 
+    // Event listeners with value displays
+    function setupControls() {
+      const widthSlider = document.getElementById("widthSlider");
+      const pitchSlider = document.getElementById("pitchSlider");
+      const bpmSlider = document.getElementById("bpmSlider");
+      const volumeSlider = document.getElementById("volumeSlider");
+      const swingSlider = document.getElementById("swingSlider");
+      const scaleSelect = document.getElementById("scaleSelect");
+
+      widthSlider.addEventListener("input", e => {
+        steps = parseInt(e.target.value);
+        document.getElementById("widthValue").textContent = steps;
+        createGrid();
+      });
+
+      pitchSlider.addEventListener("input", e => {
+        pitch = parseInt(e.target.value);
+        document.getElementById("pitchValue").textContent = pitch;
+      });
+
+      bpmSlider.addEventListener("input", e => {
+        bpm = parseInt(e.target.value);
+        document.getElementById("bpmValue").textContent = bpm;
+      });
+
+      volumeSlider.addEventListener("input", e => {
+        volume = parseInt(e.target.value) / 100;
+        document.getElementById("volumeValue").textContent = e.target.value;
+        if (masterGain) {
+          masterGain.gain.setValueAtTime(volume, audioContext.currentTime);
+        }
+      });
+
+      swingSlider.addEventListener("input", e => {
+        swing = parseInt(e.target.value);
+        document.getElementById("swingValue").textContent = swing;
+      });
+
+      scaleSelect.addEventListener("change", e => {
+        scale = e.target.value;
+      });
+    }
+
+    // Initialize
     createGrid();
+    setupControls();
   </script>
 </body>
 </html>
